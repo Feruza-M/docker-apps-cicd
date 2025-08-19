@@ -42,7 +42,9 @@ pipeline {
  
        stage('Run Container') {
            steps {
-                sh 'docker run -d --name ${APP_CONTAINER} --network ${NETWORK} -p ${params.EXTERNAL_PORT}:${params.INTERNAL_PORT} -e MONGO_HOST=${MONGO_CONTAINER} -e MONGO_USER=admin -e MONGO_PASS=secret -e NODE_ENV=production ${DOCKER_IMAGE}'
+                sh """ 
+                  docker run -d --name ${APP_CONTAINER} --network ${NETWORK} -p ${params.EXTERNAL_PORT}:${params.INTERNAL_PORT} -e MONGO_HOST=${MONGO_CONTAINER} -e MONGO_USER=admin -e MONGO_PASS=secret -e NODE_ENV=production ${DOCKER_IMAGE}
+                """
           }
        }
      

@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'DEPLOY_ENV', choices: ['dev', 'stage', 'prod'])
+        string(name: 'EXTERNAL_PORT', defaultValue: '3000')
+        string(name: 'INTERNAL_PORT', defaultValue: '3000')
+    }
+
+    environment {
+        DOCKER_IMAGE   = "auth-app"
+        MONGO_DB       = "auth"
+        MONGO_PORT     = "27017"
+        MONGO_CONTAINER= "mongo-db"
+        APP_CONTAINER  = "auth-app"
+        NETWORK        = "auth-net"
+    }
+
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'git@github.com:Feruza-M/docker-apps-cicd.git'
+               }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t ${DOCKER_IMAGE} ./nodejs-app'
+            }
+        }
+        
+        stage('Prepare') {
+            steps {
+                script {
+                       sh 'docker network create ${NETWORK} || true'
+                       sh 'docker run -d --name ${MONGO_CONTAINER} --network ${NETWORK} -e MONGO_INITDB_ROOT_USERNAME=admin -e MONGO_INITDB_ROOT_PASSWORD=secret mongo || true'
+                }
+            }
+        }
+ 
+       stage('Run Container') {
+           steps {
+                sh 'docker run -d --name ${APP_CONTAINER} --network ${NETWORK} -p ${EXTERNAL_PORT}:${INTERNAL_PORT} -e MONGO_HOST=${MONGO_CONTAINER} -e MONGO_USER=admin -e MONGO_PASS=secret -e NODE_ENV=production ${DOCKER_IMAGE}'
+          }
+       }
+     
+      stage('Health Check') {
+          steps {
+               sh 'sleep 5'
+               sh 'curl -f http://localhost:${EXTERNAL_PORT}/status'
+          }
+      }
+  }    
+
+}
+
+           

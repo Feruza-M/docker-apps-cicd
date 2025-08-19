@@ -51,7 +51,9 @@ pipeline {
       stage('Health Check') {
           steps {
                sh 'sleep 5'
-               sh 'curl -f http://localhost:${params.EXTERNAL_PORT}/status'
+               sh """
+                curl -f http://localhost:${params.EXTERNAL_PORT}/status
+              """
           }
       }
   }    

@@ -25,14 +25,14 @@ pipeline {
         stage('Run Container') {
             steps {
                 sh 'docker rm -f flask-dev || true'
-                sh 'docker run -d -p 5000:5000 --name flask-dev flask-app'
+                sh 'docker run -d -p ${params.EXTERNAL_PORT}:${params.INTERNAL_PORT} --name flask-dev flask-app'
             }
         }
 
         stage('Health Check') {
             steps {
                 sh 'sleep 5'
-                sh 'curl -f http://localhost:5000/config'
+                sh 'curl -f http://localhost:${params.EXTERNAL_PORT}/config'
             }
         }
     }

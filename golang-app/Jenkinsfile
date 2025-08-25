@@ -8,10 +8,10 @@ pipeline {
     }
 
     environment {
-        DOCKER_IMAGE = "docferuza2024/go-app"
-        CONTAINER_NAME = "go-app-test"
+        IMAGE_NAME = "feruza/go-app"
+        APP_NAME   = "My Go App"
+        VERSION    = "2.0.0"
     }
-
 
     stages {
         stage('Checkout') {
@@ -20,40 +20,38 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build & Push Docker Image') {
             steps {
-                sh "docker build -t ${DOCKER_IMAGE}:${DEPLOY_ENV} ./golang-app"
-            }
-        }
-
-        stage('Push to DockerHub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                                                  usernameVariable: 'USER',
+                                                  passwordVariable: 'PASS')]) {
                     sh """
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push ${DOCKER_IMAGE}:${DEPLOY_ENV}
+                        docker build -t $IMAGE_NAME:$DEPLOY_ENV .
+                        echo "$PASS" | docker login -u "$USER" --password-stdin
+                        docker push $IMAGE_NAME:$DEPLOY_ENV
                     """
                 }
             }
         }
 
-        stage('Test Application') {
+        stage('Run & Test') {
             steps {
                 sh """
-                    docker run -d -p ${EXTERNAL_PORT}:${INTERNAL_PORT} \
-                        --name ${CONTAINER_NAME} \
-                        -e APP_NAME="My Go App" \
-                        -e ENVIRONMENT="${DEPLOY_ENV}" \
-                        -e VERSION="2.0.0" \
-                        -e PORT="${INTERNAL_PORT}" \
-                        ${DOCKER_IMAGE}:${DEPLOY_ENV}
+                    docker run -d --name go-app-test \\
+                        -p $EXTERNAL_PORT:$INTERNAL_PORT \\
+                        -e APP_NAME="$APP_NAME" \\
+                        -e ENVIRONMENT="$DEPLOY_ENV" \\
+                        -e VERSION="$VERSION" \\
+                        -e PORT="$INTERNAL_PORT" \\
+                        $IMAGE_NAME:$DEPLOY_ENV
 
                     sleep 5
-                    curl http://localhost:${EXTERNAL_PORT}/
-                    curl http://localhost:${EXTERNAL_PORT}/health
 
-                    docker stop ${CONTAINER_NAME}
-                    docker rm ${CONTAINER_NAME}
+                    curl -f http://localhost:$EXTERNAL_PORT/ || exit 1
+                    curl -f http://localhost:$EXTERNAL_PORT/health || exit 1
+
+                    docker stop go-app-test
+                    docker rm go-app-test
                 """
             }
         }

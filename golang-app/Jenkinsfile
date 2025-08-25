@@ -29,38 +29,39 @@ pipeline {
                 )]) {
                     sh """
                         echo \$PASS | docker login -u \$USER --password-stdin
-                        docker build -t ${IMAGE_NAME}:${DEPLOY_ENV} ./golang-app
+                        docker build -t \$IMAGE_NAME:\$DEPLOY_ENV ./golang-app
                         docker push \$IMAGE_NAME:\$DEPLOY_ENV
                     """
                 }
             }
         }
 
-stage('Run & Test') {
-    steps {
-        sh """
-            # Удаляем старый контейнер с именем go-app-test, если он существует
-            if [ \$(docker ps -aq -f name=go-app-test) ]; then
-                docker rm -f go-app-test
-            fi
+        stage('Run & Test') {
+            steps {
+                sh """
+                    # Удаляем старый контейнер, если есть
+                    docker rm -f go-app-test 2>/dev/null || true
 
-            # Запускаем новый контейнер
-            docker run -d --name go-app-test \\
-                -p $EXTERNAL_PORT:$INTERNAL_PORT \\
-                -e APP_NAME="$APP_NAME" \\
-                -e ENVIRONMENT="$DEPLOY_ENV" \\
-                -e VERSION="$VERSION" \\
-                -e PORT="$INTERNAL_PORT" \\
-                $IMAGE_NAME:$DEPLOY_ENV
+                    # Запускаем новый контейнер
+                    docker run -d --name go-app-test \\
+                        -p \$EXTERNAL_PORT:\$INTERNAL_PORT \\
+                        -e APP_NAME="\$APP_NAME" \\
+                        -e ENVIRONMENT="\$DEPLOY_ENV" \\
+                        -e VERSION="\$VERSION" \\
+                        -e PORT="\$INTERNAL_PORT" \\
+                        \$IMAGE_NAME:\$DEPLOY_ENV
 
-            sleep 5
+                    sleep 5
 
-            # Проверяем доступность приложения
-            curl -f http://localhost:$EXTERNAL_PORT/ || exit 1
-            curl -f http://localhost:$EXTERNAL_PORT/health || exit 1
+                    # Проверяем доступность приложения
+                    curl -f http://localhost:\$EXTERNAL_PORT/ || exit 1
+                    curl -f http://localhost:\$EXTERNAL_PORT/health || exit 1
 
-            # Останавливаем и удаляем тестовый контейнер
-            docker rm -f go-app-test
-        """
+                    # Останавливаем и удаляем тестовый контейнер
+                    docker rm -f go-app-test
+                """
+            }
+        }
     }
 }
+

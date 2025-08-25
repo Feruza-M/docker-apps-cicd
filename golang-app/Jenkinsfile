@@ -22,13 +22,15 @@ pipeline {
 
         stage('Build & Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: '99860c26-cd17-45a6-839a-a8ac5a718201',
-                                                  usernameVariable: 'USER',
-                                                  passwordVariable: 'PASS')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: '99860c26-cd17-45a6-839a-a8ac5a718201',
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
+                )]) {
                     sh """
-                        echo "$PASS" | docker login -u "$USER" --password-stdin
-                        docker build -t docferuza2024/golang-app:${DEPLOY_ENV} .
-                        docker push docferuza2024/golang-app:${DEPLOY_ENV}
+                        echo \$PASS | docker login -u \$USER --password-stdin
+                        docker build -t \$IMAGE_NAME:\$DEPLOY_ENV .
+                        docker push \$IMAGE_NAME:\$DEPLOY_ENV
                     """
                 }
             }
@@ -38,22 +40,21 @@ pipeline {
             steps {
                 sh """
                     docker run -d --name go-app-test \\
-                        -p $EXTERNAL_PORT:$INTERNAL_PORT \\
-                        -e APP_NAME="$APP_NAME" \\
-                        -e ENVIRONMENT="$DEPLOY_ENV" \\
-                        -e VERSION="$VERSION" \\
-                        -e PORT="$INTERNAL_PORT" \\
-                        $IMAGE_NAME:$DEPLOY_ENV
+                        -p \$EXTERNAL_PORT:\$INTERNAL_PORT \\
+                        -e APP_NAME="\$APP_NAME" \\
+                        -e ENVIRONMENT="\$DEPLOY_ENV" \\
+                        -e VERSION="\$VERSION" \\
+                        -e PORT="\$INTERNAL_PORT" \\
+                        \$IMAGE_NAME:\$DEPLOY_ENV
 
                     sleep 5
 
-                    curl -f http://localhost:$EXTERNAL_PORT/ || exit 1
-                    curl -f http://localhost:$EXTERNAL_PORT/health || exit 1
+                    curl -f http://localhost:\$EXTERNAL_PORT/ || exit 1
+                    curl -f http://localhost:\$EXTERNAL_PORT/health || exit 1
 
-                    docker stop go-app-test
-                    docker rm go-app-test
-                """
+                   """
             }
         }
     }
 }
+

@@ -53,7 +53,6 @@ pipeline {
 
                     sleep 5
 
-                    # Проверяем доступность приложения
                     curl -f http://localhost:\$EXTERNAL_PORT/ || exit 1
                     curl -f http://localhost:\$EXTERNAL_PORT/health || exit 1
 

@@ -1,0 +1,61 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'DEPLOY_ENV', choices: ['dev', 'stage', 'prod'])
+        string(name: 'EXTERNAL_PORT', defaultValue: '8081')
+        string(name: 'INTERNAL_PORT', defaultValue: '8080')
+    }
+
+    environment {
+        DOCKER_IMAGE = "docferuza2024/go-app"
+        CONTAINER_NAME = "go-app-test"
+    }
+
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE}:${DEPLOY_ENV} ./golang-app"
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${DOCKER_IMAGE}:${DEPLOY_ENV}
+                    """
+                }
+            }
+        }
+
+        stage('Test Application') {
+            steps {
+                sh """
+                    docker run -d -p ${EXTERNAL_PORT}:${INTERNAL_PORT} \
+                        --name ${CONTAINER_NAME} \
+                        -e APP_NAME="My Go App" \
+                        -e ENVIRONMENT="${DEPLOY_ENV}" \
+                        -e VERSION="2.0.0" \
+                        -e PORT="${INTERNAL_PORT}" \
+                        ${DOCKER_IMAGE}:${DEPLOY_ENV}
+
+                    sleep 5
+                    curl http://localhost:${EXTERNAL_PORT}/
+                    curl http://localhost:${EXTERNAL_PORT}/health
+
+                    docker stop ${CONTAINER_NAME}
+                    docker rm ${CONTAINER_NAME}
+                """
+            }
+        }
+    }
+}

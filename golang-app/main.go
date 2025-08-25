@@ -23,6 +23,8 @@ type HealthStatus struct {
 }
 
 func main() {
+        fmt.Println("Service starting...") // added this line
+
 	appName := os.Getenv("APP_NAME")
 	if appName == "" {
 		appName = "Go Microservice"

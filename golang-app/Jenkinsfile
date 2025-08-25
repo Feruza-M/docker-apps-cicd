@@ -29,7 +29,7 @@ pipeline {
                 )]) {
                     sh """
                         echo \$PASS | docker login -u \$USER --password-stdin
-                        docker build -t \$IMAGE_NAME:\$DEPLOY_ENV .
+                        docker build -t docferuza2024/golang-app:${DEPLOY_ENV} .
                         docker push \$IMAGE_NAME:\$DEPLOY_ENV
                     """
                 }

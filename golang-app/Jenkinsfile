@@ -36,25 +36,31 @@ pipeline {
             }
         }
 
-        stage('Run & Test') {
-            steps {
-                sh """
-                    docker run -d --name go-app-test \\
-                        -p \$EXTERNAL_PORT:\$INTERNAL_PORT \\
-                        -e APP_NAME="\$APP_NAME" \\
-                        -e ENVIRONMENT="\$DEPLOY_ENV" \\
-                        -e VERSION="\$VERSION" \\
-                        -e PORT="\$INTERNAL_PORT" \\
-                        \$IMAGE_NAME:\$DEPLOY_ENV
+stage('Run & Test') {
+    steps {
+        sh """
+            # Удаляем старый контейнер с именем go-app-test, если он существует
+            if [ \$(docker ps -aq -f name=go-app-test) ]; then
+                docker rm -f go-app-test
+            fi
 
-                    sleep 5
+            # Запускаем новый контейнер
+            docker run -d --name go-app-test \\
+                -p $EXTERNAL_PORT:$INTERNAL_PORT \\
+                -e APP_NAME="$APP_NAME" \\
+                -e ENVIRONMENT="$DEPLOY_ENV" \\
+                -e VERSION="$VERSION" \\
+                -e PORT="$INTERNAL_PORT" \\
+                $IMAGE_NAME:$DEPLOY_ENV
 
-                    curl -f http://localhost:\$EXTERNAL_PORT/ || exit 1
-                    curl -f http://localhost:\$EXTERNAL_PORT/health || exit 1
+            sleep 5
 
-                   """
-            }
-        }
+            # Проверяем доступность приложения
+            curl -f http://localhost:$EXTERNAL_PORT/ || exit 1
+            curl -f http://localhost:$EXTERNAL_PORT/health || exit 1
+
+            # Останавливаем и удаляем тестовый контейнер
+            docker rm -f go-app-test
+        """
     }
 }
-

@@ -8,7 +8,7 @@ pipeline {
     }
 
     environment {
-        IMAGE_NAME = "feruza/go-app"
+        IMAGE_NAME = "docferuza2024/golang-app"
         APP_NAME   = "My Go App"
         VERSION    = "2.0.0"
     }
@@ -22,13 +22,13 @@ pipeline {
 
         stage('Build & Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                withCredentials([usernamePassword(credentialsId: '99860c26-cd17-45a6-839a-a8ac5a718201',
                                                   usernameVariable: 'USER',
                                                   passwordVariable: 'PASS')]) {
                     sh """
-                        docker build -t $IMAGE_NAME:$DEPLOY_ENV .
                         echo "$PASS" | docker login -u "$USER" --password-stdin
-                        docker push $IMAGE_NAME:$DEPLOY_ENV
+                        docker build -t docferuza2024/golang-app:${DEPLOY_ENV} .
+                        docker push docferuza2024/golang-app:${DEPLOY_ENV}
                     """
                 }
             }

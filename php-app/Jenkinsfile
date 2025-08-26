@@ -1,0 +1,86 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'DEPLOY_ENV', choices: ['dev', 'stage', 'prod'])
+        string(name: 'EXTERNAL_PORT', defaultValue: '8086')
+        string(name: 'INTERNAL_PORT', defaultValue: '8080')
+    }
+
+    environment {
+        IMAGE_NAME = "docferuza2024/php-app"
+        VERSION = "1.0.0"
+        NETWORK_NAME = "php-app-net"
+        DB_ROOT_PASSWORD = "rootpassword"
+        DB_NAME = "appdb"
+        DB_USER = "appuser"
+        DB_PASS = "password"
+    }
+
+    stages {
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${IMAGE_NAME}:${VERSION} ./php-app"
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                withDockerRegistry([credentialsId: '99860c26-cd17-45a6-839a-a8ac5a718201', url: '']) {
+                    sh "docker push ${IMAGE_NAME}:${VERSION}"
+                }
+            }
+        }
+
+         stage('Prepare Network') {
+            steps {
+                sh "docker network create ${NETWORK_NAME} || true"
+            }
+        }
+
+        stage('Deploy MySQL') {
+            steps {
+                sh """
+                    docker run -d --name mysql-db --network ${NETWORK_NAME} \
+                    -e MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD} \
+                    -e MYSQL_DATABASE=${DB_NAME} \
+                    -e MYSQL_USER=${DB_USER} \
+                    -e MYSQL_PASSWORD=${DB_PASS} \
+                    -v mysql-data:/var/lib/mysql mysql:8.0
+                """
+            }
+        }
+
+        stage('Deploy PHP App') {
+            steps {
+                sh """
+                    docker run -d --name php-app --network ${NETWORK_NAME} \
+                    -p ${params.EXTERNAL_PORT}:${params.INTERNAL_PORT} \
+                    -e APP_NAME="PHP App with MySQL" \
+                    -e ENVIRONMENT="${params.DEPLOY_ENV}" \
+                    -e VERSION="${VERSION}" \
+                    -e DB_HOST="mysql-db" \
+                    -e DB_NAME="${DB_NAME}" \
+                    -e DB_USER="${DB_USER}" \
+                    -e DB_PASS="${DB_PASS}" \
+                    ${IMAGE_NAME}:${VERSION}
+                """
+            }
+        }
+
+        stage('Check App') {
+            steps {
+                sh "sleep 5"
+                sh "curl http://localhost:${params.EXTERNAL_PORT}"
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Pipeline finished."
+        }
+    }
+}
+

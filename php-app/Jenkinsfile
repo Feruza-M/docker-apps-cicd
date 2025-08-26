@@ -41,6 +41,8 @@ pipeline {
 
         stage('Deploy MySQL') {
             steps {
+                sh "docker rm -f mysql-db || true"
+
                 sh """
                     docker run -d --name mysql-db --network ${NETWORK_NAME} \
                     -e MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD} \
@@ -54,6 +56,8 @@ pipeline {
 
         stage('Deploy PHP App') {
             steps {
+                sh "docker rm -f php-app || true"
+
                 sh """
                     docker run -d --name php-app --network ${NETWORK_NAME} \
                     -p ${params.EXTERNAL_PORT}:${params.INTERNAL_PORT} \

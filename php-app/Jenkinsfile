@@ -75,7 +75,7 @@ pipeline {
 
         stage('Check App') {
             steps {
-                sh "sleep 5"
+                sh "sleep 20"
                 sh "curl http://localhost:${params.EXTERNAL_PORT}"
             }
         }
